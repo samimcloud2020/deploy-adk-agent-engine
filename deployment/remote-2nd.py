@@ -5,7 +5,6 @@ from vertexai import agent_engines
 from vertexai.preview import reasoning_engines
 from adk_short_bot.agent import root_agent
 
-# All required functions
 def create() -> str:
     app = reasoning_engines.AdkApp(agent=root_agent, enable_tracing=True)
     remote_app = agent_engines.create(
@@ -18,13 +17,13 @@ def create() -> str:
 def delete(resource_id: str) -> None:
     agent_engines.get(resource_id).delete(force=True)
 
-def list_deployments() -> list:
+def list_deployments():
     return agent_engines.list()
 
 def create_session(resource_id: str, user_id: str = "test_user") -> dict:
     return agent_engines.get(resource_id).create_session(user_id=user_id)
 
-def list_sessions(resource_id: str, user_id: str = "test_user") -> list:
+def list_sessions(resource_id: str, user_id: str = "test_user"):
     return agent_engines.get(resource_id).list_sessions(user_id=user_id)
 
 def get_session(resource_id: str, user_id: str, session_id: str) -> dict:
@@ -34,7 +33,6 @@ def send_message(resource_id: str, user_id: str, session_id: str, message: str):
     remote_app = agent_engines.get(resource_id)
     return remote_app.stream_query(user_id=user_id, session_id=session_id, message=message)
 
-# Main execution
 def main():
     # Check environment
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
@@ -44,22 +42,52 @@ def main():
     if not all([project_id, location, bucket]):
         sys.exit("Error: Missing required environment variables")
     
-    # Initialize
+    # Initialize Vertex AI
     vertexai.init(project=project_id, location=location, staging_bucket=bucket)
     
-    # Run complete workflow
+    # 1. Create deployment
     print("Creating deployment...")
     resource_id = create()
-    print(f"Created: {resource_id}")
+    print(f"Resource ID: {resource_id}")
     
-    print("Creating session...")
-    session = create_session(resource_id, "web_user")
-    print(f"Session: {session['id']}")
+    # 2. List deployments
+    print("\nListing all deployments:")
+    deployments = list_deployments()
+    for d in deployments:
+        print(f"- {d.resource_name}")
     
-    print("Sending message...")
-    for event in send_message(resource_id, "web_user", session['id'], 
-                            "Shorten this: Hello, how are you doing today?"):
+    # 3. Create session
+    print("\nCreating session...")
+    user_id = "test_user"
+    session = create_session(resource_id, user_id)
+    session_id = session['id']
+    print(f"Session created: {session_id}")
+    
+    # 4. List sessions for user
+    print(f"\nListing sessions for user '{user_id}':")
+    sessions = list_sessions(resource_id, user_id)
+    for s in sessions:
+        print(f"- {s['id']}")
+    
+    # 5. Get session details
+    print(f"\nGetting session details for {session_id}:")
+    session_details = get_session(resource_id, user_id, session_id)
+    print(f"Session: {session_details['id']}")
+    print(f"User: {session_details['user_id']}")
+    print(f"Last update: {session_details['last_update_time']}")
+    
+    # 6. Send message
+    print(f"\nSending message to session {session_id}:")
+    message = "Shorten this message: Hello, how are you doing today?"
+    print(f"Message: {message}")
+    print("Response:")
+    for event in send_message(resource_id, user_id, session_id, message):
         print(event, end="", flush=True)
+    
+    # 7. Delete deployment (optional - comment out to keep deployment)
+    # print("\n\nDeleting deployment...")
+    # delete(resource_id)
+    # print("Deployment deleted")
 
 if __name__ == "__main__":
     main()
