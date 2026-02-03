@@ -1,4 +1,5 @@
 # ADK Short Bot
+## https://medium.com/@shins777/adk-communication-context-management-method-c105cf4add27
 
 A Python-based agent that helps shorten messages using Google's Agent Development Kit (ADK) and Vertex AI.
 
